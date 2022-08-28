@@ -1,29 +1,30 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
-	"github.com/hiltpold/lakelandcup-auth-service/utils"
+	"gorm.io/gorm"
 )
 
 type User struct {
-	Id       uuid.UUID `json:"id" gorm:"primaryKey"`
-	Email    string    `json:"email"`
-	Password string    `json:"password"`
+	Id        uuid.UUID `json:"id" gorm:"primaryKey"`
+	FirstName string    `json:"firstName" gorm:"type:varchar(255);not null"`
+	LastName  string    `json:"lastName" gorm:"type:varchar(255);not null"`
+	Email     string    `json:"email" gorm:"type:varchar(255);unique;not null"`
+	Role      string    `json:"role" gorm:"type:varchar(255)"`
+	Confirmed bool      `json:"concfirmed" gorm:"type:bool;default:false"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-// NewUser initializes a new user from an email, password and user data.
-func NewUser(email string, password string) (*User, error) {
-	id := uuid.New()
+func (user *User) BeforeCreate(db *gorm.DB) error {
+	user.CreatedAt = time.Now().Local()
+	return nil
+}
 
-	pw, err := utils.HashPassword(password)
-	if err != nil {
-		return nil, err
-	}
-
-	user := &User{
-		Id:       id,
-		Email:    email,
-		Password: pw,
-	}
-	return user, nil
+func (entity *User) BeforeUpdate(db *gorm.DB) error {
+	entity.UpdatedAt = time.Now().Local()
+	return nil
 }

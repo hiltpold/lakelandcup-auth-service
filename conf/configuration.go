@@ -1,28 +1,32 @@
 package conf
 
 import (
-	"fmt"
 	"os"
 
-	logger "github.com/hiltpold/lakelandcup-auth-service/utils"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 // Api
 type ApiConfiguration struct {
+	Host         string `mapstructure:"HOST"`
+	Port         string `mapstructure:"PORT"`
+	JWTSecretKey string `mapstructure:"JWT_SECRET"`
 }
 
 // PostgresConfiguration holds all the database related configuration.
 type PostgresConfiguration struct {
+	Host     string `mapstructure:"POSTGRES_HOST"`
+	Port     string `mapstructure:"POSTGRES_PORT"`
+	User     string `mapstructure:"POSTGRES_USER"`
+	Password string `mapstructure:"POSTGRES_PASSWORD"`
+	Database string `mapstructure:"POSTGRES_DATABASE"`
 }
 
 // Configuration holds the api configuration
 type Configuration struct {
-	Host         string `mapstructure:"HOST"`
-	Port         string `mapstructure:"PORT"`
-	JWTSecretKey string `mapstructure:"JWT_SECRET"`
-	URI          string `mapstructure:"POSTGRES_URI"`
+	API ApiConfiguration      `mapstructure:",squash"`
+	DB  PostgresConfiguration `mapstructure:",squash"`
 }
 
 // Load the environment set with the environment file
@@ -62,10 +66,5 @@ func LoadConfig(filename string) (config *Configuration, err error) {
 	err = viper.Unmarshal(t)
 	err = viper.Unmarshal(&config)
 
-	logger.Info(os.Getenv("PORT"))
-	fmt.Print(config)
-	logger.Info(config.Host)
-	logger.Info(config.JWTSecretKey)
-	logger.Info(config.Port)
 	return config, nil
 }

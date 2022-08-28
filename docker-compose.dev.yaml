@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  lakelandcup_auth_service_pg:
+    image: postgres:14-alpine
+    container_name: lakelandcup_auth_service_pg
+    restart: always
+    healthcheck:
+      interval: 120ms
+      retries: 5
+      start_period: 60ms
+      test: |
+        touch /tmp/healthcheck.txt &&
+        mkdir /tmp/healthcheck &&
+        mv /tmp/healthcheck.txt /tmp/healthcheck &&
+        cd /tmp/healthcheck &&
+        echo "hello my docker container is working fine" >> healthcheck.txt &&
+        cat healthcheck.txt &&
+        rm healthcheck.txt &&
+        cd .. &&
+        rmdir /tmp/healthcheck
+        cls
+      timeout: 60ms
+    env_file:
+      - .dev.env
+    ports:
+      - 5430:5432
+    volumes:
+      - lakeland_data:/var/lib/postgresql/data
+    networks:
+      - lakelandcup_backend
+volumes:
+  lakeland_auth_service_data:
+networks:
+  lakelandcup_backend:

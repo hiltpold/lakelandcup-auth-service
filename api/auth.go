@@ -28,7 +28,14 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 	}
 
 	user.Email = req.Email
-	user.Password, _ = utils.HashPassword(req.Password)
+	user.FirstName = req.FirstName
+	user.LastName = req.LastName
+	password, err := utils.HashPassword(req.Password)
+
+	if err != nil {
+		return nil, err
+	}
+	user.Password = password
 
 	s.C.DB.Create(&user)
 
@@ -43,7 +50,7 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 	if result := s.C.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
 		return &pb.LoginResponse{
 			Status: http.StatusNotFound,
-			Error:  "User not found",
+			Error:  "Incorrect email or password",
 		}, nil
 	}
 
@@ -52,7 +59,7 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 	if !match {
 		return &pb.LoginResponse{
 			Status: http.StatusNotFound,
-			Error:  "User not found",
+			Error:  "Incorrect email or password",
 		}, nil
 	}
 
