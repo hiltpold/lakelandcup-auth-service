@@ -20,7 +20,7 @@ type PostgresConfiguration struct {
 	Port     string `mapstructure:"POSTGRES_PORT"`
 	User     string `mapstructure:"POSTGRES_USER"`
 	Password string `mapstructure:"POSTGRES_PASSWORD"`
-	Database string `mapstructure:"POSTGRES_DATABASE"`
+	Database string `mapstructure:"POSTGRES_DB"`
 }
 
 // Configuration holds the api configuration

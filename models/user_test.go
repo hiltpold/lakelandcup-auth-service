@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type UserTest struct {
 	Id        uuid.UUID `json:"id" gorm:"primaryKey"`
 	FirstName string    `json:"firstName" gorm:"type:varchar(255);not null"`
 	LastName  string    `json:"lastName" gorm:"type:varchar(255);not null"`
@@ -19,12 +19,12 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-func (user *User) BeforeCreate(db *gorm.DB) error {
+func (user *UserTest) BeforeCreate(db *gorm.DB) error {
 	user.CreatedAt = time.Now().Local()
 	return nil
 }
 
-func (user *User) BeforeUpdate(db *gorm.DB) error {
+func (user *UserTest) BeforeUpdate(db *gorm.DB) error {
 	user.UpdatedAt = time.Now().Local()
 	return nil
 }

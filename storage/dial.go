@@ -5,8 +5,7 @@ import (
 
 	"github.com/hiltpold/lakelandcup-auth-service/conf"
 	"github.com/hiltpold/lakelandcup-auth-service/models"
-	logger "github.com/hiltpold/lakelandcup-auth-service/utils"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -24,7 +23,7 @@ func Dial(c *conf.PostgresConfiguration) Connection {
 	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
 
 	if err != nil {
-		logger.Fatal("Failed to connect to Database", zap.Error(err))
+		logrus.Fatal("Failed to connect to Database: ", err)
 	}
 
 	db.AutoMigrate(&models.User{})

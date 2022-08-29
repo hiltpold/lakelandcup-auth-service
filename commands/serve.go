@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"log"
+	"fmt"
 	"net"
 
 	"github.com/hiltpold/lakelandcup-auth-service/api"
@@ -9,9 +9,8 @@ import (
 	"github.com/hiltpold/lakelandcup-auth-service/conf"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
 	"github.com/hiltpold/lakelandcup-auth-service/utils"
-	logger "github.com/hiltpold/lakelandcup-auth-service/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -32,13 +31,15 @@ func serve(c *conf.Configuration) {
 		ExpirationHours: 24 * 365,
 	}
 
-	lis, err := net.Listen("tcp", c.API.Port)
+	dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)
+
+	lis, err := net.Listen("tcp", dbUri)
 
 	if err != nil {
-		logger.Fatal("Failed to listing: ", zap.Error(err))
+		logrus.Fatal("Failed to listen on: ", err)
 	}
 
-	logger.Info("Lakelandcup Auth Service on Port: " + c.API.Port)
+	logrus.Info("Lakelandcup Auth Service on Port: " + dbUri)
 
 	s := api.Server{
 		C:   h,
@@ -50,6 +51,6 @@ func serve(c *conf.Configuration) {
 	pb.RegisterAuthServiceServer(grpcServer, &s)
 
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalln("Failed to serve:", err)
+		logrus.Fatalln("Failed to serve:", err)
 	}
 }

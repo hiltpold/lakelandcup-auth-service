@@ -10,7 +10,7 @@ var configFile = ""
 
 var rootCmd = cobra.Command{
 	Use:   "auth",
-	Short: "Authentication Service",
+	Short: "Lakeland Authentication Service",
 	Run: func(cmd *cobra.Command, args []string) {
 		runWithConfig(cmd, serve)
 	},
