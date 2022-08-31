@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type Connection struct {
+type Repository struct {
 	DB *gorm.DB
 }
 
@@ -18,7 +18,7 @@ func getUri(db *conf.PostgresConfiguration) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", db.User, db.Password, db.Host, db.Port, db.Database)
 }
 
-func Dial(c *conf.PostgresConfiguration) Connection {
+func Dial(c *conf.PostgresConfiguration) Repository {
 	url := getUri(c)
 	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
 
@@ -28,5 +28,5 @@ func Dial(c *conf.PostgresConfiguration) Connection {
 
 	db.AutoMigrate(&models.User{})
 
-	return Connection{db}
+	return Repository{db}
 }

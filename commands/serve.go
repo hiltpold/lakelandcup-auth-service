@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/hiltpold/lakelandcup-auth-service/api"
-	"github.com/hiltpold/lakelandcup-auth-service/api/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/conf"
+	api "github.com/hiltpold/lakelandcup-auth-service/service"
+	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
 	"github.com/hiltpold/lakelandcup-auth-service/utils"
 	"github.com/sirupsen/logrus"
@@ -42,7 +42,7 @@ func serve(c *conf.Configuration) {
 	logrus.Info("Lakelandcup Auth Service on Port: " + dbUri)
 
 	s := api.Server{
-		C:   h,
+		R:   h,
 		Jwt: jwt,
 	}
 

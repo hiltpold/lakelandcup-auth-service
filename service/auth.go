@@ -1,17 +1,17 @@
-package api
+package service
 
 import (
 	"context"
 	"net/http"
 
-	"github.com/hiltpold/lakelandcup-auth-service/api/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/models"
+	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
 	"github.com/hiltpold/lakelandcup-auth-service/utils"
 )
 
 type Server struct {
-	C   storage.Connection
+	R   storage.Repository
 	Jwt utils.JwtWrapper
 	// #https://github.com/grpc/grpc-go/issues/3794:
 	pb.UnimplementedAuthServiceServer
@@ -20,7 +20,7 @@ type Server struct {
 func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	var user models.User
 
-	if result := s.C.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error == nil {
+	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error == nil {
 		return &pb.RegisterResponse{
 			Status: http.StatusConflict,
 			Error:  "E-Mail already exists",
@@ -37,7 +37,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 	}
 	user.Password = password
 
-	s.C.DB.Create(&user)
+	s.R.DB.Create(&user)
 
 	return &pb.RegisterResponse{
 		Status: http.StatusCreated,
@@ -47,7 +47,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	var user models.User
 
-	if result := s.C.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
+	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
 		return &pb.LoginResponse{
 			Status: http.StatusNotFound,
 			Error:  "Incorrect email or password",
@@ -83,7 +83,7 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 
 	var user models.User
 
-	if result := s.C.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
+	if result := s.R.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
 		return &pb.ValidateResponse{
 			Status: http.StatusNotFound,
 			Error:  "User not found",

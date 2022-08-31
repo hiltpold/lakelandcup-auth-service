@@ -1,63 +1,131 @@
-package auth_test
+package test
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
-	"os"
+	"net"
 	"testing"
 
-	"github.com/ory/dockertest/docker"
-	"github.com/ory/dockertest/v3"
+	"github.com/hiltpold/lakelandcup-auth-service/conf"
+	"github.com/hiltpold/lakelandcup-auth-service/service"
+	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
+	"github.com/hiltpold/lakelandcup-auth-service/storage"
+	"github.com/hiltpold/lakelandcup-auth-service/utils"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/test/bufconn"
 )
 
-var db *sql.DB
+const bufSize = 1024 * 1024
+const testConfig = ".test.env"
 
-func TestMain(m *testing.M) {
-	//
-	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
-	pool, err := dockertest.NewPool("")
+var lis *bufconn.Listener
+
+func init() {
+	c, err := conf.LoadConfig(testConfig)
 	if err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		logrus.Fatal(fmt.Sprintf("Failed to load config %s.", testConfig), err)
+	}
+	h := storage.Dial(&c.DB)
+
+	jwt := utils.JwtWrapper{
+		SecretKey:       c.API.JWTSecretKey,
+		Issuer:          "lakelandcup-auth-service",
+		ExpirationHours: 24 * 365,
 	}
 
-	// Pull an image, create a container based on it and set all necessary parameters
-	opts := dockertest.RunOptions{
-		Repository:   "mdillon/postgis",
-		Tag:          "latest",
-		Env:          []string{"POSTGRES_PASSWORD=mysecretpassword"},
-		ExposedPorts: []string{},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"5432": {
-				{HostIP: "0.0.0.0", HostPort: "5433"},
-			},
-		},
+	lis = bufconn.Listen(bufSize)
+	s := service.Server{
+		R:   h,
+		Jwt: jwt,
 	}
-
-	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
-	if err := pool.Retry(func() error {
-		var err error
-		db, err = sql.Open("mysql", fmt.Sprintf("root:secret@(localhost:%s)/mysql", resource.GetPort("3306/tcp")))
-		if err != nil {
-			return err
+	grpcServer := grpc.NewServer()
+	pb.RegisterAuthServiceServer(grpcServer, &s)
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Server exited with error: %v", err)
 		}
-		return db.Ping()
-	}); err != nil {
-		log.Fatalf("Could not connect to database: %s", err)
-	}
-
-	code := m.Run()
-
-	// You can't defer this because os.Exit doesn't care for defer
-	if err := pool.Purge(resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
-	}
-
-	os.Exit(code)
+	}()
 }
 
-func TestSomething(t *testing.T) {
-	// db.Query()
+func bufDialer(context.Context, string) (net.Conn, error) {
+	return lis.Dial()
 }
-func TestAuthService(t *testing.T) {
+
+func TestLogin(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewAuthServiceClient(conn)
+
+	loginReq := pb.LoginRequest{Password: "password", Email: "test@gmail.com"}
+
+	resp, err := client.Login(ctx, &loginReq)
+	if err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+	log.Printf("Response: %+v", resp)
+	// Test for output here.
+}
+
+func TestRegister(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewAuthServiceClient(conn)
+
+	registerReq := pb.RegisterRequest{
+		FirstName: "Max",
+		LastName:  "Muster",
+		Email:     "max.muster@gmail.com",
+		Password:  "password",
+	}
+
+	resp, err := client.Register(ctx, &registerReq)
+
+	if err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+	log.Printf("Response: %+v", resp)
+	// Test for output here.
+}
+
+func TestRegisterAndLogin(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewAuthServiceClient(conn)
+
+	registerReq := pb.RegisterRequest{
+		FirstName: "Max",
+		LastName:  "Muster",
+		Email:     "max.muster@gmail.com",
+		Password:  "password",
+	}
+
+	registerResp, err := client.Register(ctx, &registerReq)
+	log.Printf("Response: %+v", registerResp)
+
+	if err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+	loginReq := pb.LoginRequest{Password: "password", Email: "test@gmail.com"}
+
+	loginResp, err2 := client.Login(ctx, &loginReq)
+	log.Printf("Response: %+v", loginResp)
+
+	if err2 != nil {
+		t.Fatalf("Login failed: %v", err2)
+	}
+	// Test for output here.
 }

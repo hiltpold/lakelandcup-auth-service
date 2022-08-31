@@ -2,7 +2,11 @@ package conf
 
 import (
 	"os"
+	"strings"
 
+	"path/filepath"
+
+	"github.com/hiltpold/lakelandcup-auth-service/utils"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
@@ -49,10 +53,15 @@ func LoadConfig(filename string) (config *Configuration, err error) {
 	if err := loadEnvironment(filename); err != nil {
 		return nil, err
 	}
-	viper.AddConfigPath(".")
-	viper.SetConfigName(".dev")
-	viper.SetConfigType("env")
 
+	fp, fn := filepath.Split(filename)
+	fn_splitted := strings.Split(fn, ".")
+	configName := strings.Join(fn_splitted[0:len(fn_splitted)-1], ".")
+	configType := fn_splitted[len(fn_splitted)-1]
+
+	viper.AddConfigPath(utils.Ternary(fp != "", fp, "."))
+	viper.SetConfigName(configName)
+	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
