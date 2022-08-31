@@ -8,19 +8,23 @@ import (
 	"testing"
 
 	"github.com/hiltpold/lakelandcup-auth-service/conf"
+	"github.com/hiltpold/lakelandcup-auth-service/models"
 	"github.com/hiltpold/lakelandcup-auth-service/service"
 	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
 	"github.com/hiltpold/lakelandcup-auth-service/utils"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+	"gorm.io/gorm"
 )
 
 const bufSize = 1024 * 1024
 const testConfig = ".test.env"
 
 var lis *bufconn.Listener
+var db *gorm.DB
 
 func init() {
 	c, err := conf.LoadConfig(testConfig)
@@ -28,7 +32,7 @@ func init() {
 		logrus.Fatal(fmt.Sprintf("Failed to load config %s.", testConfig), err)
 	}
 	h := storage.Dial(&c.DB)
-
+	db = h.DB
 	jwt := utils.JwtWrapper{
 		SecretKey:       c.API.JWTSecretKey,
 		Issuer:          "lakelandcup-auth-service",
@@ -62,14 +66,17 @@ func TestLogin(t *testing.T) {
 	defer conn.Close()
 	client := pb.NewAuthServiceClient(conn)
 
-	loginReq := pb.LoginRequest{Password: "password", Email: "test@gmail.com"}
+	loginReq := pb.LoginRequest{Email: "max.muster@gmail.com", Password: "password"}
 
-	resp, err := client.Login(ctx, &loginReq)
+	loginResp, err := client.Login(ctx, &loginReq)
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
-	log.Printf("Response: %+v", resp)
-	// Test for output here.
+	log.Printf("Response: %+v", loginResp)
+
+	// Test for response here.
+	assert.Equal(t, loginResp.Status, int64(404))
+	assert.Equal(t, loginResp.Error, "Incorrect email or password")
 }
 
 func TestRegister(t *testing.T) {
@@ -81,20 +88,30 @@ func TestRegister(t *testing.T) {
 	defer conn.Close()
 	client := pb.NewAuthServiceClient(conn)
 
-	registerReq := pb.RegisterRequest{
+	registerReq1 := pb.RegisterRequest{
 		FirstName: "Max",
 		LastName:  "Muster",
 		Email:     "max.muster@gmail.com",
 		Password:  "password",
 	}
 
-	resp, err := client.Register(ctx, &registerReq)
+	registerResp1, err1 := client.Register(ctx, &registerReq1)
 
-	if err != nil {
-		t.Fatalf("Login failed: %v", err)
+	if err1 != nil {
+		t.Fatalf("Login failed: %v", err1)
 	}
-	log.Printf("Response: %+v", resp)
-	// Test for output here.
+
+	log.Printf("Response: %+v", registerResp1)
+	// Test for response here.
+	assert.Equal(t, registerResp1.Status, int64(201))
+
+	// Clean Up
+	user := models.User{}
+	if result := db.Where(&models.User{Email: registerReq1.Email}).First(&user); result.Error != nil {
+		logrus.Fatal("Could not query Database", result.Error)
+	}
+	db.Delete(&user)
+
 }
 
 func TestRegisterAndLogin(t *testing.T) {
