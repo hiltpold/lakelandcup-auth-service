@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/hiltpold/lakelandcup-auth-service/conf"
@@ -25,17 +26,20 @@ const testConfig = ".test.env"
 
 var lis *bufconn.Listener
 var db *gorm.DB
+var client pb.AuthServiceClient
+var ctx context.Context
+var conn *grpc.ClientConn
 
-func init() {
-	c, err := conf.LoadConfig(testConfig)
-	if err != nil {
-		logrus.Fatal(fmt.Sprintf("Failed to load config %s.", testConfig), err)
-	}
+func bufDialer(context.Context, string) (net.Conn, error) {
+	return lis.Dial()
+}
+
+func setupServer(c *conf.Configuration) {
 	h := storage.Dial(&c.DB)
 	db = h.DB
 	jwt := utils.JwtWrapper{
 		SecretKey:       c.API.JWTSecretKey,
-		Issuer:          "lakelandcup-auth-service",
+		Issuer:          "lakelandcup-auth-service-test",
 		ExpirationHours: 24 * 365,
 	}
 
@@ -53,18 +57,33 @@ func init() {
 	}()
 }
 
-func bufDialer(context.Context, string) (net.Conn, error) {
-	return lis.Dial()
-}
-
-func TestLogin(t *testing.T) {
+func setupClient() (pb.AuthServiceClient, context.Context, *grpc.ClientConn) {
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	if err != nil {
-		t.Fatalf("Failed to dial bufnet: %v", err)
+		logrus.Fatalf("Failed to dial bufnet: %v", err)
 	}
-	defer conn.Close()
-	client := pb.NewAuthServiceClient(conn)
+	c := pb.NewAuthServiceClient(conn)
+	return c, ctx, conn
+}
+
+func setup() (pb.AuthServiceClient, context.Context, *grpc.ClientConn) {
+	c, err := conf.LoadConfig(testConfig)
+	if err != nil {
+		logrus.Fatal(fmt.Sprintf("Failed to load config %s.", testConfig), err)
+	}
+	setupServer(c)
+	return setupClient()
+}
+
+func TestMain(m *testing.M) {
+	client, ctx, conn = setup()
+	exitVal := m.Run()
+	conn.Close()
+	os.Exit(exitVal)
+}
+
+func TestLogin(t *testing.T) {
 
 	loginReq := pb.LoginRequest{Email: "max.muster@gmail.com", Password: "password"}
 
@@ -78,16 +97,7 @@ func TestLogin(t *testing.T) {
 	assert.Equal(t, loginResp.Status, int64(404))
 	assert.Equal(t, loginResp.Error, "Incorrect email or password")
 }
-
 func TestRegister(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("Failed to dial bufnet: %v", err)
-	}
-	defer conn.Close()
-	client := pb.NewAuthServiceClient(conn)
-
 	registerReq1 := pb.RegisterRequest{
 		FirstName: "Max",
 		LastName:  "Muster",
@@ -98,31 +108,20 @@ func TestRegister(t *testing.T) {
 	registerResp1, err1 := client.Register(ctx, &registerReq1)
 
 	if err1 != nil {
-		t.Fatalf("Login failed: %v", err1)
+		t.Fatalf("Regirstration failed: %v", err1)
 	}
 
 	log.Printf("Response: %+v", registerResp1)
+
 	// Test for response here.
 	assert.Equal(t, registerResp1.Status, int64(201))
-
+	assert.Equal(t, registerResp1.Error, "")
 	// Clean Up
-	user := models.User{}
-	if result := db.Where(&models.User{Email: registerReq1.Email}).First(&user); result.Error != nil {
-		logrus.Fatal("Could not query Database", result.Error)
-	}
-	db.Delete(&user)
+	db.Where("Email = ?", registerReq1.Email).Delete(&models.User{})
 
 }
 
 func TestRegisterAndLogin(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("Failed to dial bufnet: %v", err)
-	}
-	defer conn.Close()
-	client := pb.NewAuthServiceClient(conn)
-
 	registerReq := pb.RegisterRequest{
 		FirstName: "Max",
 		LastName:  "Muster",
@@ -136,7 +135,7 @@ func TestRegisterAndLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
-	loginReq := pb.LoginRequest{Password: "password", Email: "test@gmail.com"}
+	loginReq := pb.LoginRequest{Password: "password", Email: "max.muster@gmail.com"}
 
 	loginResp, err2 := client.Login(ctx, &loginReq)
 	log.Printf("Response: %+v", loginResp)
@@ -144,5 +143,11 @@ func TestRegisterAndLogin(t *testing.T) {
 	if err2 != nil {
 		t.Fatalf("Login failed: %v", err2)
 	}
-	// Test for output here.
+	// Test for response here.
+	assert.Equal(t, registerResp.Status, int64(201))
+	assert.Equal(t, registerResp.Error, "")
+	assert.Equal(t, loginResp.Status, int64(200))
+	assert.Equal(t, loginResp.Error, "")
+	// Clean Up
+	db.Where("Email = ?", registerReq.Email).Delete(&models.User{})
 }
