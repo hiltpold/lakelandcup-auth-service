@@ -27,10 +27,16 @@ type PostgresConfiguration struct {
 	Database string `mapstructure:"POSTGRES_DB"`
 }
 
+// Sendgrid
+type MailConfiguration struct {
+	SGSecretKey string `mapstructure:"SENDGRID_KEY"`
+}
+
 // Configuration holds the api configuration
 type Configuration struct {
-	API ApiConfiguration      `mapstructure:",squash"`
-	DB  PostgresConfiguration `mapstructure:",squash"`
+	API  ApiConfiguration      `mapstructure:",squash"`
+	DB   PostgresConfiguration `mapstructure:",squash"`
+	Mail MailConfiguration     `mapstructure:",squash"`
 }
 
 // Load the environment set with the environment file

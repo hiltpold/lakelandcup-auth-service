@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/hiltpold/lakelandcup-auth-service/models"
 	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
 	"github.com/hiltpold/lakelandcup-auth-service/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -20,10 +22,10 @@ type Server struct {
 func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	var user models.User
 
-	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error == nil {
+	if findUser := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); findUser.Error == nil {
 		return &pb.RegisterResponse{
 			Status: http.StatusConflict,
-			Error:  "E-Mail already exists",
+			Error:  "Email already exists",
 		}, nil
 	}
 
@@ -37,7 +39,32 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 	}
 	user.Password = password
 
-	s.R.DB.Create(&user)
+	if createUser := s.R.DB.Create(&user); createUser.Error != nil {
+		return &pb.RegisterResponse{
+			Status: http.StatusForbidden,
+			Error:  "Register new account failed",
+		}, nil
+	}
+
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+
+	if errToken != nil {
+		defer logrus.Error(errToken.Error())
+		return &pb.RegisterResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Generate accessToken failed",
+		}, nil
+	}
+
+	_, errSendMail := utils.SendGridMail(user.FirstName, "matthias.hiltpold@gmail.com", "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
+
+	if errSendMail != nil {
+		defer logrus.Error(errSendMail.Error())
+		return &pb.RegisterResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Sending email activation failed",
+		}, nil
+	}
 
 	return &pb.RegisterResponse{
 		Status: http.StatusCreated,
