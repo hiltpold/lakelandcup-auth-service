@@ -31,15 +31,16 @@ func serve(c *conf.Configuration) {
 		ExpirationHours: 24 * 365,
 	}
 
-	dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)
+	//dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)
+	serviceUri := fmt.Sprintf("%s:%s", c.API.Host, c.API.Port)
 
-	lis, err := net.Listen("tcp", dbUri)
+	lis, err := net.Listen("tcp", serviceUri)
 
 	if err != nil {
 		logrus.Fatal("Failed to listen on: ", err)
 	}
 
-	logrus.Info("Lakelandcup Auth Service on Port: " + dbUri)
+	logrus.Info("Lakelandcup Auth Service on: " + serviceUri)
 
 	s := api.Server{
 		R:   h,

@@ -98,6 +98,37 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 	}, nil
 }
 
+func (s *Server) Activate(ctx context.Context, req *pb.ActivateRequest) (*pb.ActivateResponse, error) {
+	var user models.User
+
+	claims, err := s.Jwt.ValidateToken(req.Token)
+
+	if err != nil {
+		return &pb.ActivateResponse{
+			Status: http.StatusBadRequest,
+			Error:  err.Error(),
+		}, nil
+	}
+
+	if result := s.R.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
+		return &pb.ActivateResponse{
+			Status: http.StatusNotFound,
+			Error:  "Token does not belong to a user",
+		}, nil
+	}
+
+	if update := s.R.DB.Model(&user).Update("Confirmed", true); update.Error != nil {
+		return &pb.ActivateResponse{
+			Status: http.StatusNotFound,
+			Error:  "User could not be updated",
+		}, nil
+	}
+
+	return &pb.ActivateResponse{
+		Status: http.StatusOK,
+	}, nil
+}
+
 func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.ValidateResponse, error) {
 	claims, err := s.Jwt.ValidateToken(req.Token)
 

@@ -1,12 +1,13 @@
 syntax = "proto3";
 
-package pb;
+package auth;
 
 option go_package = "./service/pb";
 
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse) {}
   rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc Activate(ActivateRequest) returns (ActivateResponse) {}
   rpc Validate(ValidateRequest) returns (ValidateResponse) {}
 }
 
@@ -36,6 +37,15 @@ message LoginResponse {
   string error = 2;
   string token = 3;
 }
+
+// Activate
+
+message ActivateRequest { string token =1; }
+
+message ActivateResponse {
+    int64 status = 1;
+    string error = 2;
+  }
 
 // Validate
 
