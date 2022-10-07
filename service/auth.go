@@ -56,7 +56,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 		}, nil
 	}
 
-	_, errSendMail := utils.SendGridMail(user.FirstName, "matthias.hiltpold@gmail.com", "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
+	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
 
 	if errSendMail != nil {
 		defer logrus.Error(errSendMail.Error())
@@ -125,6 +125,41 @@ func (s *Server) Activate(ctx context.Context, req *pb.ActivateRequest) (*pb.Act
 	}
 
 	return &pb.ActivateResponse{
+		Status: http.StatusOK,
+	}, nil
+}
+
+func (s *Server) ResendActivationToken(ctx context.Context, req *pb.ResendActivationTokenRequest) (*pb.ResendActivationTokenResponse, error) {
+	var user models.User
+
+	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
+		return &pb.ResendActivationTokenResponse{
+			Status: http.StatusNotFound,
+			Error:  "Email was never registered",
+		}, nil
+	}
+
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+
+	if errToken != nil {
+		defer logrus.Error(errToken.Error())
+		return &pb.ResendActivationTokenResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Generate accessToken failed",
+		}, nil
+	}
+
+	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
+
+	if errSendMail != nil {
+		defer logrus.Error(errSendMail.Error())
+		return &pb.ResendActivationTokenResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Sending email activation failed",
+		}, nil
+	}
+
+	return &pb.ResendActivationTokenResponse{
 		Status: http.StatusOK,
 	}, nil
 }

@@ -25,6 +25,7 @@ type AuthServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*ActivateResponse, error)
+	ResendActivationToken(ctx context.Context, in *ResendActivationTokenRequest, opts ...grpc.CallOption) (*ResendActivationTokenResponse, error)
 	Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error)
 }
 
@@ -63,6 +64,15 @@ func (c *authServiceClient) Activate(ctx context.Context, in *ActivateRequest, o
 	return out, nil
 }
 
+func (c *authServiceClient) ResendActivationToken(ctx context.Context, in *ResendActivationTokenRequest, opts ...grpc.CallOption) (*ResendActivationTokenResponse, error) {
+	out := new(ResendActivationTokenResponse)
+	err := c.cc.Invoke(ctx, "/auth.AuthService/ResendActivationToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error) {
 	out := new(ValidateResponse)
 	err := c.cc.Invoke(ctx, "/auth.AuthService/Validate", in, out, opts...)
@@ -79,6 +89,7 @@ type AuthServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Activate(context.Context, *ActivateRequest) (*ActivateResponse, error)
+	ResendActivationToken(context.Context, *ResendActivationTokenRequest) (*ResendActivationTokenResponse, error)
 	Validate(context.Context, *ValidateRequest) (*ValidateResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
@@ -95,6 +106,9 @@ func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*Lo
 }
 func (UnimplementedAuthServiceServer) Activate(context.Context, *ActivateRequest) (*ActivateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Activate not implemented")
+}
+func (UnimplementedAuthServiceServer) ResendActivationToken(context.Context, *ResendActivationTokenRequest) (*ResendActivationTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResendActivationToken not implemented")
 }
 func (UnimplementedAuthServiceServer) Validate(context.Context, *ValidateRequest) (*ValidateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
@@ -166,6 +180,24 @@ func _AuthService_Activate_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ResendActivationToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResendActivationTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResendActivationToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.AuthService/ResendActivationToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResendActivationToken(ctx, req.(*ResendActivationTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_Validate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateRequest)
 	if err := dec(in); err != nil {
@@ -202,6 +234,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Activate",
 			Handler:    _AuthService_Activate_Handler,
+		},
+		{
+			MethodName: "ResendActivationToken",
+			Handler:    _AuthService_ResendActivationToken_Handler,
 		},
 		{
 			MethodName: "Validate",
