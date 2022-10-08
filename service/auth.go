@@ -145,11 +145,11 @@ func (s *Server) ResendActivationToken(ctx context.Context, req *pb.ResendActiva
 		defer logrus.Error(errToken.Error())
 		return &pb.ResendActivationTokenResponse{
 			Status: http.StatusBadRequest,
-			Error:  "Generate accessToken failed",
+			Error:  "Generate access token failed",
 		}, nil
 	}
 
-	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
+	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Account Activation", "register", accessToken, os.Getenv("SENDGRID_KEY"))
 
 	if errSendMail != nil {
 		defer logrus.Error(errSendMail.Error())
@@ -162,6 +162,91 @@ func (s *Server) ResendActivationToken(ctx context.Context, req *pb.ResendActiva
 	return &pb.ResendActivationTokenResponse{
 		Status: http.StatusOK,
 	}, nil
+}
+
+func (s *Server) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordRequest) (*pb.ForgotPasswordResponse, error) {
+	var user models.User
+
+	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
+		return &pb.ForgotPasswordResponse{
+			Status: http.StatusNotFound,
+			Error:  "Email was never registered",
+		}, nil
+	}
+
+	if !user.Confirmed {
+		return &pb.ForgotPasswordResponse{
+			Status: http.StatusForbidden,
+			Error:  "Email was never activated",
+		}, nil
+	}
+
+	forgotToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+
+	if errToken != nil {
+		defer logrus.Error(errToken.Error())
+		return &pb.ForgotPasswordResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Generate forgot access token failed",
+		}, nil
+	}
+
+	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Reset Password", "fogot", forgotToken, os.Getenv("SENDGRID_KEY"))
+
+	if errSendMail != nil {
+		defer logrus.Error(errSendMail.Error())
+		return &pb.ForgotPasswordResponse{
+			Status: http.StatusBadRequest,
+			Error:  "Sending email for retrieving password failed",
+		}, nil
+	}
+
+	return &pb.ForgotPasswordResponse{
+		Status: http.StatusOK,
+	}, nil
+
+}
+
+func (s *Server) ResetPassword(ctx context.Context, req *pb.ResetPasswordRequest) (*pb.ResetPasswordResponse, error) {
+	var user models.User
+
+	claims, err := s.Jwt.ValidateToken(req.Token)
+
+	if err != nil {
+		return &pb.ResetPasswordResponse{
+			Status: http.StatusBadRequest,
+			Error:  err.Error(),
+		}, nil
+	}
+
+	if result := s.R.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
+		return &pb.ResetPasswordResponse{
+			Status: http.StatusNotFound,
+			Error:  "Email was never registered",
+		}, nil
+	}
+
+	if req.Password != req.ConfirmPassword {
+		return &pb.ResetPasswordResponse{
+			Status: http.StatusForbidden,
+			Error:  "Confirmation password does not match password",
+		}, nil
+	}
+
+	user.Password, _ = utils.HashPassword(req.Password)
+
+	if updateNewPassword := s.R.DB.Debug().Select("password", "update_at").Where("email = ?", claims.Email).Updates(user); updateNewPassword != nil {
+		return &pb.ResetPasswordResponse{
+			Status: http.StatusForbidden,
+			Error:  "Error occured during password reset",
+		}, nil
+
+	}
+
+	return &pb.ResetPasswordResponse{
+		Status: http.StatusOK,
+	}, nil
+
 }
 
 func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.ValidateResponse, error) {
