@@ -15,7 +15,7 @@ type BodyRequest struct {
 }
 
 func ParseHtml(fileName string, data map[string]string) string {
-	html, errParse := template.ParseFiles("../templates/" + fileName + ".html")
+	html, errParse := template.ParseFiles("templates/" + fileName + ".html")
 
 	if errParse != nil {
 		defer fmt.Println("parser file html failed")
