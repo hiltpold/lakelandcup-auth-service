@@ -4,5 +4,5 @@ proto:
 build:
 	go build -ldflags "-X github.com/hiltpold/lakelandcup-auth-service/commands.Version=`git rev-parse HEAD`"
 
-dev-server:
+auth-service-dev:
 	go run main.go -c .dev.env
