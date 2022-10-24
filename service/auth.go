@@ -56,7 +56,8 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 		}, nil
 	}
 
-	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Activation Account", "register", accessToken, os.Getenv("SENDGRID_KEY"))
+	// TODO: parse api response and check for errors
+	_, errSendMail := utils.SendGridMail(user.FirstName, user.Email, "Account Activation", "register", accessToken, os.Getenv("SENDGRID_KEY"))
 
 	if errSendMail != nil {
 		defer logrus.Error(errSendMail.Error())

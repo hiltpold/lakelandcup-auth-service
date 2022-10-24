@@ -20,6 +20,7 @@ type User struct {
 }
 
 func (user *User) BeforeCreate(db *gorm.DB) error {
+	user.Id = uuid.New()
 	user.CreatedAt = time.Now().Local()
 	return nil
 }
