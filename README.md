@@ -24,3 +24,9 @@ $ make proto
 $ make server
 ```
 
+## Connect to the Database
+```bash
+docker exec -it <containerhash> bin/bash
+su - postgres
+psql "postgresql://postgres:postgres@localhost/lakelandcup_auth_service"
+```

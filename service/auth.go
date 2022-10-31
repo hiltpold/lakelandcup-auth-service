@@ -46,7 +46,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 		}, nil
 	}
 
-	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -74,7 +74,6 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 
 func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	var user models.User
-
 	if result := s.R.DB.Where(&models.User{Email: req.Email}).First(&user); result.Error != nil {
 		return &pb.LoginResponse{
 			Status: http.StatusNotFound,
@@ -91,18 +90,28 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 		}, nil
 	}
 
-	token, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+	if !user.Confirmed {
+		return &pb.LoginResponse{
+			Status: http.StatusForbidden,
+			Error:  "User not yet Confirmed",
+		}, nil
+
+	}
+
+	accessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "ACCESS_TOKEN")
+	refreshToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "REFRESH_TOKEN")
 
 	return &pb.LoginResponse{
-		Status: http.StatusOK,
-		Token:  token,
+		Status:       http.StatusOK,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
 func (s *Server) Activate(ctx context.Context, req *pb.ActivateRequest) (*pb.ActivateResponse, error) {
 	var user models.User
 
-	claims, err := s.Jwt.ValidateToken(req.Token)
+	claims, err := s.Jwt.ValidateToken(req.Token, "")
 
 	if err != nil {
 		return &pb.ActivateResponse{
@@ -140,7 +149,7 @@ func (s *Server) ResendActivationToken(ctx context.Context, req *pb.ResendActiva
 		}, nil
 	}
 
-	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -182,7 +191,7 @@ func (s *Server) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordReque
 		}, nil
 	}
 
-	forgotToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email})
+	forgotToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -211,7 +220,7 @@ func (s *Server) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordReque
 func (s *Server) ResetPassword(ctx context.Context, req *pb.ResetPasswordRequest) (*pb.ResetPasswordResponse, error) {
 	var user models.User
 
-	claims, err := s.Jwt.ValidateToken(req.Token)
+	claims, err := s.Jwt.ValidateToken(req.Token, "")
 
 	if err != nil {
 		return &pb.ResetPasswordResponse{
@@ -250,8 +259,35 @@ func (s *Server) ResetPassword(ctx context.Context, req *pb.ResetPasswordRequest
 
 }
 
+func (s *Server) Refresh(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
+	claims, err := s.Jwt.ValidateToken(req.RefreshToken, "REFRESH_TOKEN")
+
+	if err != nil {
+		return &pb.RefreshTokenResponse{
+			Status: http.StatusBadRequest,
+			Error:  err.Error(),
+		}, nil
+	}
+
+	var user models.User
+
+	if result := s.R.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
+		return &pb.RefreshTokenResponse{
+			Status: http.StatusNotFound,
+			Error:  "User not found",
+		}, nil
+	}
+
+	newAccessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "ACCESS_TOKEN")
+
+	return &pb.RefreshTokenResponse{
+		Status: http.StatusOK,
+		Token:  newAccessToken,
+	}, nil
+}
+
 func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.ValidateResponse, error) {
-	claims, err := s.Jwt.ValidateToken(req.Token)
+	claims, err := s.Jwt.ValidateToken(req.Token, "")
 
 	if err != nil {
 		return &pb.ValidateResponse{

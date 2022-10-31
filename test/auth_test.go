@@ -38,7 +38,7 @@ func setupServer(c *conf.Configuration) {
 	h := storage.Dial(&c.DB)
 	db = h.DB
 	jwt := utils.JwtWrapper{
-		SecretKey:       c.API.JWTSecretKey,
+		TokenKey:        c.API.TokenSecretKey,
 		Issuer:          "lakelandcup-auth-service-test",
 		ExpirationHours: 24 * 365,
 	}

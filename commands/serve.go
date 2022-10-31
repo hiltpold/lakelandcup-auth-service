@@ -26,9 +26,14 @@ func serve(c *conf.Configuration) {
 	h := storage.Dial(&c.DB)
 
 	jwt := utils.JwtWrapper{
-		SecretKey:       c.API.JWTSecretKey,
-		Issuer:          "lakelandcup-auth-service",
-		ExpirationHours: 24 * 365,
+		TokenKey:            c.API.TokenSecretKey,
+		TokenExpires:        c.API.TokenExpires,
+		AccessTokenKey:      c.API.AccessTokenSecretKey,
+		AccessTokenExpires:  c.API.AccessTokenExpires,
+		RefreshTokenKey:     c.API.RefreshTokenSecretKey,
+		RefreshTokenExpires: c.API.RefreshTokenExpires,
+		Issuer:              "lakelandcup-auth-service",
+		ExpirationHours:     24 * 365,
 	}
 
 	//dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)

@@ -13,9 +13,14 @@ import (
 
 // Api
 type ApiConfiguration struct {
-	Host         string `mapstructure:"HOST"`
-	Port         string `mapstructure:"PORT"`
-	JWTSecretKey string `mapstructure:"JWT_SECRET"`
+	Host                  string `mapstructure:"HOST"`
+	Port                  string `mapstructure:"PORT"`
+	TokenSecretKey        string `mapstructure:"JWT_TOKEN_SECRET_KEY"`
+	TokenExpires          int64  `mapstructure:"JWT_TOKEN_EXPIRES_H"`
+	AccessTokenSecretKey  string `mapstructure:"JWT_ACCESS_TOKEN_SECRET_KEY"`
+	AccessTokenExpires    int64  `mapstructure:"JWT_ACCESS_TOKEN_EXPIRES_H"`
+	RefreshTokenSecretKey string `mapstructure:"JWT_REFRESH_TOKEN_SECRET_KEY"`
+	RefreshTokenExpires   int64  `mapstructure:"JWT_REFRESH_TOKEN_EXPIRES_H"`
 }
 
 // PostgresConfiguration holds all the database related configuration.

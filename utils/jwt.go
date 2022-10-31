@@ -6,12 +6,18 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type JwtWrapper struct {
-	SecretKey       string
-	Issuer          string
-	ExpirationHours int64
+	TokenKey            string
+	TokenExpires        int64
+	AccessTokenKey      string
+	AccessTokenExpires  int64
+	RefreshTokenKey     string
+	RefreshTokenExpires int64
+	Issuer              string
+	ExpirationHours     int64
 }
 
 type jwtClaims struct {
@@ -25,8 +31,7 @@ type JwtData struct {
 	Email string
 }
 
-func (w *JwtWrapper) GenerateToken(data JwtData) (signedToken string, err error) {
-
+func (w *JwtWrapper) GenerateToken(data JwtData, tokenType string) (signedToken string, err error) {
 	claims := &jwtClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(w.ExpirationHours)).Unix(),
@@ -37,9 +42,17 @@ func (w *JwtWrapper) GenerateToken(data JwtData) (signedToken string, err error)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	signedToken, err = token.SignedString([]byte(w.SecretKey))
-
+	switch tokenType {
+	case "ACCESS_TOKEN":
+		signedToken, err = token.SignedString([]byte(w.AccessTokenKey))
+		logrus.Info(w.AccessTokenKey)
+	case "REFRESH_TOKEN":
+		signedToken, err = token.SignedString([]byte(w.RefreshTokenKey))
+		logrus.Info(w.RefreshTokenKey)
+	default:
+		signedToken, err = token.SignedString([]byte(w.TokenKey))
+	}
+	logrus.Info((signedToken))
 	if err != nil {
 		return "", err
 	}
@@ -47,12 +60,19 @@ func (w *JwtWrapper) GenerateToken(data JwtData) (signedToken string, err error)
 	return signedToken, nil
 }
 
-func (w *JwtWrapper) ValidateToken(signedToken string) (claims *jwtClaims, err error) {
+func (w *JwtWrapper) ValidateToken(signedToken string, tokenType string) (claims *jwtClaims, err error) {
 	token, err := jwt.ParseWithClaims(
 		signedToken,
 		&jwtClaims{},
 		func(token *jwt.Token) (interface{}, error) {
-			return []byte(w.SecretKey), nil
+			switch tokenType {
+			case "ACCESS_TOKEN":
+				return []byte(w.AccessTokenKey), nil
+			case "REFRESH_TOKEN":
+				return []byte(w.RefreshTokenKey), nil
+			default:
+				return []byte(w.TokenKey), nil
+			}
 		},
 	)
 
