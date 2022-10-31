@@ -287,7 +287,8 @@ func (s *Server) Refresh(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.
 }
 
 func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.ValidateResponse, error) {
-	claims, err := s.Jwt.ValidateToken(req.Token, "")
+	tokenType := req.TokenType
+	claims, err := s.Jwt.ValidateToken(req.Token, tokenType)
 
 	if err != nil {
 		return &pb.ValidateResponse{

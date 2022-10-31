@@ -87,7 +87,10 @@ message ResetPasswordResponse {
 
 // Validate
 
-message ValidateRequest { string token = 1; }
+message ValidateRequest { 
+    string token = 1;
+    string token_type = 2;
+}
 
 message ValidateResponse {
   int64 status = 1;
