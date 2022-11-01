@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type JwtWrapper struct {
@@ -45,14 +44,11 @@ func (w *JwtWrapper) GenerateToken(data JwtData, tokenType string) (signedToken 
 	switch tokenType {
 	case "ACCESS_TOKEN":
 		signedToken, err = token.SignedString([]byte(w.AccessTokenKey))
-		logrus.Info(w.AccessTokenKey)
 	case "REFRESH_TOKEN":
 		signedToken, err = token.SignedString([]byte(w.RefreshTokenKey))
-		logrus.Info(w.RefreshTokenKey)
 	default:
 		signedToken, err = token.SignedString([]byte(w.TokenKey))
 	}
-	logrus.Info((signedToken))
 	if err != nil {
 		return "", err
 	}
