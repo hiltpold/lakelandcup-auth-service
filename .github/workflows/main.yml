@@ -1,0 +1,47 @@
+#
+# Publish lakelandcup-ui docker image to digitalocean registry. The following secret must be provided through github
+#   - DIGITALOCEAN_ACCESS_TOKEN (digitalocean access token)
+#   - ENV_PROD (environment file that contains configuration)
+#
+
+name: Publish lakelandcup-auth-service
+
+env:
+  PROJECT: lakelandcup
+  REGISTRY: registry.digitalocean.com/hiltpold
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version'
+        required: false
+        default: "latest"
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo 
+        uses: actions/checkout@v3
+      - name: Generate env from secrets
+        run: |
+          echo "${{ secrets.ENV_PROD }}" > .prod.env
+      - name: Build image 
+        run: docker build -t ${{ env.PROJECT }}/${{ github.event.repository.name }} .
+      - name: Install doctl 
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to DO Container Registry 
+        run: doctl registry login --expiry-seconds 600
+      - name: Tag image 
+        run: >
+          docker tag ${{ env.PROJECT }}/${{ github.event.repository.name }}
+          ${{ env.REGISTRY }}/${{ env.PROJECT }}/${{ github.event.repository.name }}:${{ github.event.inputs.version }}
+      - name: Push image to Registry 
+        run: >
+          docker push
+          ${{ env.REGISTRY }}/${{ env.PROJECT }}/${{ github.event.repository.name }}:${{ github.event.inputs.version }}
+        
+        
