@@ -12,5 +12,6 @@ RUN apk --no-cache add ca-certificates libc6-compat
 WORKDIR /app/
 COPY --from=build /app/lakelandcup-auth-service .
 COPY --from=build /app/.prod.env /app/.prod.env
+COPY --from=build /app/templates/  /app/templates/
 EXPOSE 50010
 CMD ["./lakelandcup-auth-service","-c",".prod.env"]  
