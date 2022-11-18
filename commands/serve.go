@@ -37,7 +37,7 @@ func serve(c *conf.Configuration) {
 	}
 
 	//dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)
-	serviceUri := fmt.Sprintf("%s:%s", c.API.Host, c.API.Port)
+	serviceUri := fmt.Sprintf(":%s", c.API.Port)
 
 	lis, err := net.Listen("tcp", serviceUri)
 
