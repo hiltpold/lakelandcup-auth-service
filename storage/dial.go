@@ -14,19 +14,61 @@ type Repository struct {
 	DB *gorm.DB
 }
 
-func getUri(db *conf.PostgresConfiguration) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", db.User, db.Password, db.Host, db.Port, db.Database)
+func openDb(c *conf.PostgresConfiguration, gormConfig *gorm.Config, database string) *gorm.DB {
+	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", c.User, c.Password, c.Host, c.Port, database)
+	db, err := gorm.Open(postgres.Open(connectionString), gormConfig)
+	if err != nil {
+		logrus.Fatal(fmt.Sprintf("Unable to connect to database '%s'given url: ", database), err)
+	}
+	logrus.Info(fmt.Sprintf("Connected to database %s", database))
+	return db
 }
 
 func Dial(c *conf.PostgresConfiguration) Repository {
-	url := getUri(c)
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+	gormDefaultConfig := &gorm.Config{}
+	gormAppConfig := &gorm.Config{}
 
-	if err != nil {
-		logrus.Fatal("Failed to connect to Database: ", err)
+	// connect to default database
+	logrus.Info(fmt.Sprintf("Use default database %s for initialization", c.DefaultDatabase))
+	defaultDb := openDb(c, gormDefaultConfig, c.DefaultDatabase)
+
+	// check if database exists and create it if necessary
+	var dbexists bool
+	dbSQL := fmt.Sprintf("SELECT EXISTS (SELECT FROM pg_database WHERE datname = '%s') AS dbexists;", c.AppDatabase)
+	defaultDb.Raw(dbSQL).Row().Scan(&dbexists)
+	if !dbexists {
+		logrus.Info(fmt.Sprintf("Created database %s", c.AppDatabase))
+		db := defaultDb.Exec(fmt.Sprintf("CREATE DATABASE %s;", c.AppDatabase))
+		if db.Error != nil {
+			logrus.Fatal("Unable to create app database: ", db.Error)
+		}
 	}
 
-	db.AutoMigrate(&models.User{})
+	// connect to app databse
+	appDb := openDb(c, gormAppConfig, c.AppDatabase)
 
-	return Repository{db}
+	// check if schema exists and create it if necessary
+	var schemaexists bool
+	schemaSQL := fmt.Sprintf("SELECT EXISTS(SELECT FROM pg_namespace WHERE nspname = '%s') AS schemaexisits;", c.AppDatabaseSchema)
+	appDb.Raw(schemaSQL).Row().Scan(&schemaexists)
+	// create app specfic database, if not already existing
+	if !schemaexists {
+		// create service specific schema
+		db := appDb.Exec(fmt.Sprintf("CREATE SCHEMA %s;", c.AppDatabaseSchema))
+		if db.Error != nil {
+			logrus.Fatal(fmt.Sprintf("Unable to create database schema %s", c.AppDatabaseSchema), db.Error)
+		}
+		logrus.Info(fmt.Sprintf("Created database schema %s", c.AppDatabaseSchema))
+	}
+
+	db := appDb.Exec(fmt.Sprintf(`set search_path='%s';`, c.AppDatabaseSchema))
+	logrus.Info(fmt.Sprintf("Use existing database schema %s", c.AppDatabaseSchema))
+	if db.Error != nil {
+		logrus.Fatal(fmt.Sprintf("Unable to set search_path for database to schema %s", c.AppDatabaseSchema), db.Error)
+	}
+
+	// migrate table
+	appDb.AutoMigrate(&models.User{})
+
+	return Repository{appDb}
 }

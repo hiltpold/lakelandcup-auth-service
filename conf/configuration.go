@@ -13,6 +13,9 @@ import (
 
 // Api
 type ApiConfiguration struct {
+	App                   string `mapstructure:"APP"`
+	Svc                   string `mapstructure:"SVC"`
+	Env                   string `mapstructure:"ENV"`
 	Host                  string `mapstructure:"HOST"`
 	Port                  string `mapstructure:"PORT"`
 	TokenSecretKey        string `mapstructure:"JWT_TOKEN_SECRET_KEY"`
@@ -25,11 +28,13 @@ type ApiConfiguration struct {
 
 // PostgresConfiguration holds all the database related configuration.
 type PostgresConfiguration struct {
-	Host     string `mapstructure:"POSTGRES_HOST"`
-	Port     string `mapstructure:"POSTGRES_PORT"`
-	User     string `mapstructure:"POSTGRES_USER"`
-	Password string `mapstructure:"POSTGRES_PASSWORD"`
-	Database string `mapstructure:"POSTGRES_DB"`
+	Host              string `mapstructure:"POSTGRES_HOST"`
+	Port              string `mapstructure:"POSTGRES_PORT"`
+	User              string `mapstructure:"POSTGRES_USER"`
+	Password          string `mapstructure:"POSTGRES_PASSWORD"`
+	DefaultDatabase   string `mapstructure:"POSTGRES_DEFAULT_DB"`
+	AppDatabase       string `mapstructure:"POSTGRES_APP_DB"`
+	AppDatabaseSchema string `mapstructure:"POSTGRES_APP_DB_SCHEMA"`
 }
 
 // Sendgrid

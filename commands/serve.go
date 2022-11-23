@@ -24,7 +24,6 @@ var serveCmd = cobra.Command{
 
 func serve(c *conf.Configuration) {
 	h := storage.Dial(&c.DB)
-
 	jwt := utils.JwtWrapper{
 		TokenKey:            c.API.TokenSecretKey,
 		TokenExpires:        c.API.TokenExpires,
@@ -36,7 +35,6 @@ func serve(c *conf.Configuration) {
 		ExpirationHours:     24 * 365,
 	}
 
-	//dbUri := fmt.Sprintf("%s:%s", c.DB.Host, c.DB.Port)
 	serviceUri := fmt.Sprintf(":%s", c.API.Port)
 
 	lis, err := net.Listen("tcp", serviceUri)
@@ -45,7 +43,7 @@ func serve(c *conf.Configuration) {
 		logrus.Fatal("Failed to listen on: ", err)
 	}
 
-	logrus.Info("Lakelandcup Auth Service on: " + serviceUri)
+	logrus.Info(fmt.Sprintf("Service [%s] from app [%s] is running on [%s]", c.API.Svc, c.API.App, serviceUri))
 
 	s := api.Server{
 		R:   h,
