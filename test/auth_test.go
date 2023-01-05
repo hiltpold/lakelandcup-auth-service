@@ -97,6 +97,7 @@ func TestLogin(t *testing.T) {
 	assert.Equal(t, loginResp.Status, int64(404))
 	assert.Equal(t, loginResp.Error, "Incorrect email or password")
 }
+
 func TestRegister(t *testing.T) {
 	registerReq1 := pb.RegisterRequest{
 		FirstName: "Max",
