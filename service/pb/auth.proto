@@ -13,6 +13,7 @@ service AuthService {
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {}
   rpc Validate(ValidateRequest) returns (ValidateResponse) {}
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {}
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
 }
 
 // TODO: consolidate api responses
@@ -106,4 +107,20 @@ message RefreshTokenResponse {
   int64 status = 1;
   string error = 2;
   string token = 3;
+}
+
+
+// Users
+
+message User {
+    string id = 1;
+    string name = 2;
+}
+
+message GetUsersRequest { string userID = 1; }
+
+message GetUsersResponse {
+  int64 status = 1;
+  string error = 2;
+  repeated User users = 3; 
 }

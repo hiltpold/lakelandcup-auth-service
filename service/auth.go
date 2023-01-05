@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/hiltpold/lakelandcup-auth-service/models"
 	"github.com/hiltpold/lakelandcup-auth-service/service/pb"
 	"github.com/hiltpold/lakelandcup-auth-service/storage"
@@ -309,5 +311,42 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 	return &pb.ValidateResponse{
 		Status: http.StatusOK,
 		UserId: user.Id.String(),
+	}, nil
+}
+
+func (s *Server) GetUsers(ctx context.Context, req *pb.GetUsersRequest) (*pb.GetUsersResponse, error) {
+
+	var user models.User
+	var users []models.User
+
+	if result := s.R.DB.Where(&models.User{Id: uuid.MustParse(req.UserID)}).First(&user); result.Error != nil {
+		return &pb.GetUsersResponse{
+			Status: http.StatusNotFound,
+			Error:  "No such user",
+		}, nil
+	}
+
+	if !user.Confirmed {
+		return &pb.GetUsersResponse{
+			Status: http.StatusConflict,
+			Error:  "Only confirmed users can query users",
+		}, nil
+	}
+
+	if result := s.R.DB.Where(&models.User{Confirmed: true}).Find(&users); result.Error != nil {
+		return &pb.GetUsersResponse{
+			Status: http.StatusNotFound,
+			Error:  "No users at all found",
+		}, nil
+	}
+
+	var resUsers []*pb.User
+	for _, u := range users {
+		resUsers = append(resUsers, &pb.User{Id: u.Id.String(), Name: fmt.Sprintf("%s %s", u.FirstName, u.LastName)})
+	}
+
+	return &pb.GetUsersResponse{
+		Status: http.StatusOK,
+		Users:  resUsers,
 	}, nil
 }
