@@ -15,10 +15,10 @@ type Repository struct {
 }
 
 func openDb(c *conf.PostgresConfiguration, gormConfig *gorm.Config, database string) *gorm.DB {
-	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", c.User, c.Password, c.Host, c.Port, database)
+	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s", c.User, c.Password, c.Host, c.Port, database, c.AppDatabaseSchema)
 	db, err := gorm.Open(postgres.Open(connectionString), gormConfig)
 	if err != nil {
-		logrus.Fatal(fmt.Sprintf("Unable to connect to database '%s'given url: ", database), err)
+		logrus.Fatal(fmt.Sprintf("Unable to connect to database '%s' given url: ", database), err)
 	}
 	logrus.Info(fmt.Sprintf("Connected to database %s", database))
 	return db
@@ -51,7 +51,7 @@ func Dial(c *conf.PostgresConfiguration) Repository {
 	var schemaexists bool
 	schemaSQL := fmt.Sprintf("SELECT EXISTS(SELECT FROM pg_namespace WHERE nspname = '%s') AS schemaexisits;", c.AppDatabaseSchema)
 	appDb.Raw(schemaSQL).Row().Scan(&schemaexists)
-	// create app specfic database, if not already existing
+	// create app specfic schema, if not already existing
 	if !schemaexists {
 		// create service specific schema
 		db := appDb.Exec(fmt.Sprintf("CREATE SCHEMA %s;", c.AppDatabaseSchema))
@@ -59,12 +59,6 @@ func Dial(c *conf.PostgresConfiguration) Repository {
 			logrus.Fatal(fmt.Sprintf("Unable to create database schema %s", c.AppDatabaseSchema), db.Error)
 		}
 		logrus.Info(fmt.Sprintf("Created database schema %s", c.AppDatabaseSchema))
-	}
-
-	db := appDb.Exec(fmt.Sprintf(`set search_path='%s';`, c.AppDatabaseSchema))
-	logrus.Info(fmt.Sprintf("Use existing database schema %s", c.AppDatabaseSchema))
-	if db.Error != nil {
-		logrus.Fatal(fmt.Sprintf("Unable to set search_path for database to schema %s", c.AppDatabaseSchema), db.Error)
 	}
 
 	// migrate table

@@ -300,8 +300,7 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 	}
 
 	var user models.User
-
-	if result := s.R.DB.Where(&models.User{Email: claims.Email}).First(&user); result.Error != nil {
+	if result := s.R.DB.Where(&models.User{Id: claims.Id}).First(&user); result.Error != nil {
 		return &pb.ValidateResponse{
 			Status: http.StatusNotFound,
 			Error:  "User not found",
@@ -310,7 +309,7 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 
 	return &pb.ValidateResponse{
 		Status: http.StatusOK,
-		UserId: user.Id.String(),
+		UserId: claims.Id.String(),
 	}, nil
 }
 
