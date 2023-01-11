@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Lakelandcup Password Reset</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+	</head>
+
+	<body>
+		<div>
+			<h4>Lakelandcup</h4>
+			<p>Hello</p>
+            <p>You requested to reset your password. Follow this link to reset the password for {{.To}}: </p>
+            <span>
+            <p><a href="{{.ForgotPasswordUrl}}/{{.Token}}">Activation Link</a></p>
+            </span>
+			<p>Cheers</p>
+            <p>Lakelandcup Team</p>
+		</div>
+	</body>
+</html>
