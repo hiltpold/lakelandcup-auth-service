@@ -44,6 +44,7 @@ message LoginResponse {
   string error = 2;
   string token = 3;
   string refresh_token = 4;
+  string userId = 5;
 }
 
 // Activate
@@ -97,6 +98,7 @@ message ValidateResponse {
   int64 status = 1;
   string error = 2;
   string userId = 3;
+  string role = 4;
 }
 
 // Refresh
@@ -113,8 +115,9 @@ message RefreshTokenResponse {
 // Users
 
 message User {
-    string id = 1;
-    string name = 2;
+    string ID = 1;
+    string Name = 2;
+    string Role = 3;
 }
 
 message GetUsersRequest { string userID = 1; }

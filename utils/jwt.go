@@ -23,11 +23,13 @@ type jwtClaims struct {
 	jwt.StandardClaims
 	Id    uuid.UUID
 	Email string
+	Role  string
 }
 
 type JwtData struct {
 	Id    uuid.UUID
 	Email string
+	Role  string
 }
 
 func (w *JwtWrapper) GenerateToken(data JwtData, tokenType string) (signedToken string, err error) {
@@ -38,6 +40,7 @@ func (w *JwtWrapper) GenerateToken(data JwtData, tokenType string) (signedToken 
 		},
 		Id:    data.Id,
 		Email: data.Email,
+		Role:  data.Role,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

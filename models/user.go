@@ -8,7 +8,7 @@ import (
 )
 
 type User struct {
-	Id        uuid.UUID `json:"id" gorm:"primaryKey"`
+	ID        uuid.UUID `json:"id" gorm:"primaryKey"`
 	FirstName string    `json:"firstName" gorm:"type:varchar(255);not null"`
 	LastName  string    `json:"lastName" gorm:"type:varchar(255);not null"`
 	Email     string    `json:"email" gorm:"type:varchar(255);unique;not null"`
@@ -20,7 +20,7 @@ type User struct {
 }
 
 func (user *User) BeforeCreate(db *gorm.DB) error {
-	user.Id = uuid.New()
+	user.ID = uuid.New()
 	user.CreatedAt = time.Now().Local()
 	return nil
 }

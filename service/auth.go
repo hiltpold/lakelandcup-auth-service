@@ -48,7 +48,7 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Reg
 		}, nil
 	}
 
-	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -100,13 +100,14 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResp
 
 	}
 
-	accessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "ACCESS_TOKEN")
-	refreshToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "REFRESH_TOKEN")
+	accessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "ACCESS_TOKEN")
+	refreshToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "REFRESH_TOKEN")
 
 	return &pb.LoginResponse{
 		Status:       http.StatusOK,
 		Token:        accessToken,
 		RefreshToken: refreshToken,
+		UserId:       user.ID.String(),
 	}, nil
 }
 
@@ -151,7 +152,7 @@ func (s *Server) ResendActivationToken(ctx context.Context, req *pb.ResendActiva
 		}, nil
 	}
 
-	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
+	accessToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -193,7 +194,7 @@ func (s *Server) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordReque
 		}, nil
 	}
 
-	forgotToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "")
+	forgotToken, errToken := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "")
 
 	if errToken != nil {
 		defer logrus.Error(errToken.Error())
@@ -280,7 +281,7 @@ func (s *Server) Refresh(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.
 		}, nil
 	}
 
-	newAccessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.Id, Email: user.Email}, "ACCESS_TOKEN")
+	newAccessToken, _ := s.Jwt.GenerateToken(utils.JwtData{Id: user.ID, Email: user.Email, Role: user.Role}, "ACCESS_TOKEN")
 
 	return &pb.RefreshTokenResponse{
 		Status: http.StatusOK,
@@ -300,7 +301,7 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 	}
 
 	var user models.User
-	if result := s.R.DB.Where(&models.User{Id: claims.Id}).First(&user); result.Error != nil {
+	if result := s.R.DB.Where(&models.User{ID: claims.Id}).First(&user); result.Error != nil {
 		return &pb.ValidateResponse{
 			Status: http.StatusNotFound,
 			Error:  "User not found",
@@ -310,6 +311,7 @@ func (s *Server) Validate(ctx context.Context, req *pb.ValidateRequest) (*pb.Val
 	return &pb.ValidateResponse{
 		Status: http.StatusOK,
 		UserId: claims.Id.String(),
+		Role:   claims.Role,
 	}, nil
 }
 
@@ -318,7 +320,7 @@ func (s *Server) GetUsers(ctx context.Context, req *pb.GetUsersRequest) (*pb.Get
 	var user models.User
 	var users []models.User
 
-	if result := s.R.DB.Where(&models.User{Id: uuid.MustParse(req.UserID)}).First(&user); result.Error != nil {
+	if result := s.R.DB.Where(&models.User{ID: uuid.MustParse(req.UserID)}).First(&user); result.Error != nil {
 		return &pb.GetUsersResponse{
 			Status: http.StatusNotFound,
 			Error:  "No such user",
@@ -341,7 +343,7 @@ func (s *Server) GetUsers(ctx context.Context, req *pb.GetUsersRequest) (*pb.Get
 
 	var resUsers []*pb.User
 	for _, u := range users {
-		resUsers = append(resUsers, &pb.User{Id: u.Id.String(), Name: fmt.Sprintf("%s %s", u.FirstName, u.LastName)})
+		resUsers = append(resUsers, &pb.User{ID: u.ID.String(), Name: fmt.Sprintf("%s %s", u.FirstName, u.LastName), Role: u.Role})
 	}
 
 	return &pb.GetUsersResponse{
