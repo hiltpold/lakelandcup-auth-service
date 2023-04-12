@@ -18,7 +18,7 @@ func openDb(c *conf.PostgresConfiguration, gormConfig *gorm.Config, database str
 	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s", c.User, c.Password, c.Host, c.Port, database, c.AppDatabaseSchema)
 	db, err := gorm.Open(postgres.Open(connectionString), gormConfig)
 	if err != nil {
-		logrus.Fatal(fmt.Sprintf("Unable to connect to database '%s' given url: ", database), err)
+		logrus.Fatal(fmt.Sprintf("Unable to connect to database '%s' given url: %s", database, connectionString), err)
 	}
 	logrus.Info(fmt.Sprintf("Connected to database %s", database))
 	return db
